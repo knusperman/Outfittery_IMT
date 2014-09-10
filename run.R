@@ -1,8 +1,12 @@
 #Shiny launch script
 #put into the same folder as the other files
 #the path to the data files has to adjusted in the import script before running
-path <- "Volumes/Nifty/R/Outfittery Inventory Management/"
-Sys.setlocale(category = "LC_ALL", "en_US.UTF-8")
+path <- "C:/Users/PS-309/Desktop/Outfittery_IMT-test"
+setwd(path)
+#Mac
+#Sys.setlocale(category = "LC_ALL", "en_US.UTF-8")
+#Windows
+Sys.setlocale("LC_ALL","English")
 library(caret)
 library(data.table)
 library(datasets)
@@ -24,8 +28,8 @@ library(tree)
 library(robust)
 library(shiny)
 
-source("/Volumes/Nifty/R/Outfittery Inventory Management/Outfittery_IMT/import.R")
-source("/Volumes/Nifty/R/Outfittery Inventory Management/Outfittery_IMT/functions.R")
-source("/Volumes/Nifty/R/Outfittery Inventory Management/Outfittery_IMT/extra.R")
-shiny::runApp("/Volumes/Nifty/R/Outfittery Inventory Management/Outfittery_IMT/")
+source("import.R")
+source("functions.R")
+source("extra.R")
+shiny::runApp()
 #runGitHub("Outfittery_IMT","knusperman")
