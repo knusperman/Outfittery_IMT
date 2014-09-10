@@ -20,9 +20,9 @@ library(zoo)
 library(reshape2)
 library(tree)
 library(robust)
-source("import.R")
-source("functions.R")
-source("extra.R")
+source("/Volumes/Nifty/R/Outfittery Inventory Management/Outfittery_IMT/import.R")
+source("/Volumes/Nifty/R/Outfittery Inventory Management/Outfittery_IMT/functions.R")
+source("/Volumes/Nifty/R/Outfittery Inventory Management/Outfittery_IMT/extra.R")
 CGcOnDayOpen <- getCGcOnDay(openPO, "f_arrival")
 monthlyCGint <- 0
 
@@ -32,6 +32,30 @@ shinyServer(function(input, output, session) {
   output$test <- renderText(as.numeric(input$ScenarioPF)+as.numeric(input$ScenarioPP)+as.numeric(input$ScenarioPN))
   
   
+  forecastdata<- reactive(
+    if( input$SForecastexecute!=0){
+    
+    switch(isolate(input$sRadioB),
+           #incoming only
+           "1" = {  d <-CGcOnDayOpen
+                    d <- d[d[,1] >= isolate(input$SForecastrange[1]) & d[,1]<=isolate(input$SForecastrange[2]),]
+                    d <- data.frame("expected Arrival" = d[1], "expected POs"=d[2], "expected Quantity" = d[3])
+                    colnames(d)<-c("expected Arrival","expected POs", "expected Quantity" )
+                    d
+           },
+           #outgoing country level
+           "2" = {shipped.data(as.Date(isolate(input$SForecastrange[1])),as.Date(isolate(input$SForecastrange[2])))
+           },
+           #outgoing order level
+           
+           #full
+           "3" = {#selecting the right columns
+             df <- inventoryForecast()[[1]]
+             df <- df[c(1,2,3,20,21,40,41)]
+             setnames(df,1:7,c("date","CO shipped", "Articles shipped", "PO recieved", "Articles recieved", "CO returned", "Articles returned"))
+             df
+           })
+  })
   
   inventoryForecast <- reactive(
     if(input$SForecastexecute != 0){inventoryforecast(as.numeric(isolate(input$SForecastrange[2])-maxdate))}
@@ -99,35 +123,16 @@ shinyServer(function(input, output, session) {
   output$DeliveryWindowGraph <- renderPlot({print(ggplot(supplier_po_measures[!is.na(supplier_po_measures$edd),], aes(x = w_percentage_of_window, y = purchase_order_id, color = order_type, size = articles))+geom_point()+coord_cartesian(xlim=c(-5,5))+scale_x_continuous(breaks=seq(-5,5,0.25))+geom_vline(x=0, linetype="dashed",color = "red")+geom_vline(x=1, linetype="dashed",color = "red")+theme(axis.ticks = element_blank(), axis.text.y = element_blank(), axis.text.x=element_text(angle=90,hjust=0))+xlab("Percentage of delivery window")+ylab("PO id"))})
   output$DeliveryWindowData <- renderDataTable({
     data <- data.frame(supplier_po_measures[!is.na(supplier_po_measures$edd), ])[c(-8,-9,-10,-11,-12,-15,-18)]
+    suppliernames <- join(data[1],suppliers)[2]
+    data[1]<-suppliernames
     setnames(data, 1:13, c("Supplier id", "PO id","earliest delivery date","latest delivery date", "season", "order type", "booking days", "articles","window", "w. mean day in window", "w. percentage of window", "articles before window","articles after window"))
   data
     })
+  
   output$forecastdata <- renderDataTable({
-    if( input$SForecastexecute!=0){
-      
-   switch(isolate(input$sRadioB),
-          #incoming only
-          "1" = {  d <-CGcOnDayOpen
-                   d <- d[d[,1] >= isolate(input$SForecastrange[1]) & d[,1]<=isolate(input$SForecastrange[2]),]
-                   d <- data.frame("expected Arrival" = d[1], "expected POs"=d[2], "expected Quantity" = d[3])
-                   colnames(d)<-c("expected Arrival","expected POs", "expected Quantity" )
-                   d
-                },
-          #outgoing country level
-          "2" = {shipped.data(as.Date(isolate(input$SForecastrange[1])),as.Date(isolate(input$SForecastrange[2])))
-                 },
-          #outgoing order level
-         
-          #full
-          "3" = {#selecting the right columns
-                df <- inventoryForecast()[[1]]
-                df <- df[c(1,2,3,20,21,40,41)]
-                setnames(df,1:7,c("date","CO shipped", "Articles shipped", "PO recieved", "Articles recieved", "CO returned", "Articles returned"))
-                df
-                })
-    }
-      
+    forecastdata()  
   })
+  
   output$supplieranalysistable <- renderDataTable({
     a <- data.frame(supplier_measures)[c(1,2,3,7,9,10,12,15:18)]
     a$avg_window <- round(a$avg_window,2)
@@ -135,6 +140,8 @@ shinyServer(function(input, output, session) {
     a$avg_w_mean_day_in_window <- round(a$avg_w_mean_day_in_window,2)
     a$sd_w_mean_day_in_window <- round(a$sd_w_mean_day_in_window,2)
     a$ArticleShare <- round(a$ArticleShare,2)
+    suppliernames <- join(a[1],suppliers)[2]
+    a[1] <- suppliernames
     setnames(a, 1:11, c("Supplier","#PO partitions", "avg. # bookingdays", "avg. window size", "articles", "avg. w. mean day in window", "sd w. mean day in window","Articles too early","Articles too late","#PO not in window", "Share of Articles [%]"))
     a
     
@@ -146,7 +153,12 @@ shinyServer(function(input, output, session) {
       paste("openPO", '.csv', sep='') 
     },
     content = function(file) {
-      write.csv(openPOshaped, file)
+      write.csv({  data<-openPOshaped
+                   setnames(data,2,"supplier_id")
+                   suppliernames <- join(data[2],suppliers)[2]
+                   data[2]<-suppliernames
+                   setnames(data,2,"Supplier")
+                   data}, file)
     }
   )
  
@@ -159,6 +171,15 @@ shinyServer(function(input, output, session) {
                   setnames(out, 1:3, c("expected Arrival", "# PO","# Articles" ))
                   setnames(out, 4:21, lev[1:18])
                   out}, file)
+    }
+  )
+  
+  output$downloadingingForecastSummary <- downloadHandler(
+    filename = function() { 
+      paste("forecastsummary", '.csv', sep='') 
+    },
+    content = function(file) {
+      write.csv(  { forecastdata()}, file)
     }
   )
   
@@ -185,7 +206,12 @@ shinyServer(function(input, output, session) {
   )
   
   output$openPOTable<- renderDataTable({
-  openPOshaped
+  data<-openPOshaped
+  setnames(data,2,"supplier_id")
+  suppliernames <- join(data[2],suppliers)[2]
+  data[2]<-suppliernames
+  setnames(data,2,"Supplier")
+  data
     })
   output$welcome <- renderText({hello()[2]})
   output$language <- renderText(hello()[1])
@@ -285,7 +311,7 @@ shinyServer(function(input, output, session) {
     setnames(holtsub, 1, "value")
     setnames(stlsub, 1 , "value")
     dfForecastsub <- rbind(stlsub, holtsub)
-    #ADJUST Country Number
+    #ADJUST Country Number?
     dfForecastsub$algorithm <-c( rep("STL", dim(dfForecast)[1]), rep("HoltWinters", dim(dfForecast)[1] ))
     dfForecastsub$algorithm <- factor(dfForecastsub$algorithm)
     colnames(dfForecastsub) <- c("value", "day", "country", "algorithm")
@@ -296,17 +322,23 @@ shinyServer(function(input, output, session) {
   output$thelastxdays <- renderPlot({
     series <- switch(input$countryinput,
           #ADJUST
-                     "1"=DEtimeseries,
-                     "2"=ATtimeseries,
-                     "3"=CHtimeseries,
-                     "4"=NLtimeseries,
-                     "5"=Ttimeseries)
+                    "1"=DEtimeseries,
+                    "2"=ATtimeseries,
+                    "3"=CHtimeseries,
+                    "4"=NLtimeseries,
+                    "5"=DKtimeseries,
+                    "6"=LUtimeseries,
+                    "7"=SEtimeseries,
+                    "8"=Ttimeseries)
     country <- switch(input$countryinput,
                       "1" ="DE",
                       "2" ="AT",
                       "3" ="CH",
                       "4" ="NL",
-                      "5" ="DE") # total time series. do not change DE here
+                      "5" ="DK",
+                      "6" ="LU",
+                      "7" ="SE",
+                      "8" ="DE") # total time series. do not change DE here
           #/ADJUST
     h <- as.numeric(input$thelastxdate[2]-input$thelastxdate[1], units ="days")
     plot <- decomp2(series, frequency = 7, country = country,h )
@@ -326,13 +358,19 @@ output$thelastxdaysdata <- renderDataTable({
                    "2"=ATtimeseries,
                    "3"=CHtimeseries,
                    "4"=NLtimeseries,
-                   "5"=Ttimeseries)
+                   "5"=DKtimeseries,
+                   "6"=LUtimeseries,
+                   "7"=SEtimeseries,
+                   "8"=Ttimeseries)
   country <- switch(input$countryinput,
                     "1" ="DE",
                     "2" ="AT",
                     "3" ="CH",
                     "4" ="NL",
-                    "5" ="DE")
+                    "5" ="DK",
+                    "6" ="LU",
+                    "7" ="SE",
+                    "8" ="DE") 
   
   #/ADJUST
   h <- as.numeric(input$thelastxdate[2]-input$thelastxdate[1], units ="days")

@@ -1,19 +1,10 @@
-#packages
-#data.table
-#caret
-#forecast
-#ggplot2
-#lubridate
-#mass
-#plyr
-#proc
-#e1071
-#stinepack
-
-#incoming
+suppliers <- read.csv2(		file = "/Volumes/Nifty/R/Outfittery Inventory Management/data/supplier.csv", sep =";")[c(1,3)]
+openPO <- read.csv2(		file = "/Volumes/Nifty/R/Outfittery Inventory Management/data/open_po.csv", sep = ";")
+outgoingdata  <- read.csv2(	file = "/Volumes/Nifty/R/Outfittery Inventory Management/data/outgoing.csv", sep = ";")
+incomingdata  <- read.csv2(	file = "/Volumes/Nifty/R/Outfittery Inventory Management/data/incoming.csv", sep = ";" )
+inventory <- read.csv2(		file = "/Volumes/Nifty/R/Outfittery Inventory Management/data/inventory.csv", sep = ";")
 #----------------------------------------------------------------------------------
-
-incomingdata  <- read.csv2(file = "data/incoming.csv", sep = ";" )
+setnames(suppliers,1:2,c("supplier_id", "name"))
 
  incomingdata$purchase_order_id  <-  as.factor(incomingdata$purchase_order_id)
  incomingdata$supplier_id  <-  as.factor(incomingdata$supplier_id)
@@ -52,7 +43,7 @@ data.tablesumbooking  <- data.table(incomingdata)[, list(sum = sum(daily_booking
 #---------------------------------------------------------------------------------
 #openpo
 #change
-openPO <- read.csv2(file="data/open_po.csv", sep = ",")
+
  openPO$purchase_order_id  <-  as.factor(openPO$purchase_order_id)
  openPO$supplier_id  <-  as.factor(openPO$supplier_id)
  openPO$earliest_delivery_date  <- as.Date(openPO$earliest_delivery_date)
@@ -61,7 +52,6 @@ openPO <- read.csv2(file="data/open_po.csv", sep = ",")
 
 #----------------------------------------------------------------------------------
 ## outgoing
-outgoingdata  <- read.csv2(file = "data/outgoing.csv", sep = ";")
 outgoingdata$id  <- as.factor(outgoingdata$id)
 outgoingdata$state  <- as.factor(outgoingdata$state)
 outgoingdata$payment_method  <- as.factor(outgoingdata$payment_method)
@@ -126,7 +116,7 @@ last6weeksoutgoing <- subset(outgoingdata, outgoingdata$date_shipped > max(outgo
 #------------------------------------------
 #inventory
 
-inventory <- read.csv2("data/inventory.csv", sep = ",")
+
 inventory$datum <- as.Date(inventory$datum)
 inventory$v_Schuhe  <- as.numeric(gsub(",","", inventory$v_Schuhe))
 inventory$v_Outdoor  <- as.numeric(gsub(",","", inventory$v_Outdoor))

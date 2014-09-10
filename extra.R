@@ -44,13 +44,13 @@ openPO.forecast$cluster <- ifelse(is.na(openPO.forecast$cluster), names(t)[t == 
 #create models
 
 #new models
-tree <- tree(formula = w_mean_day_in_window ~ cluster + windowweekday + articles, data = wW_supplier_po_measures)
-treepruned <- prune.tree(tree, best = 6)
+rlm <- lmrob(formula = w_mean_day_in_window ~ cluster + windowweekday + articles, data = wW_supplier_po_measures)
+if(rlm1$converged==FALSE){rlm <- lm(formula = w_mean_day_in_window ~ cluster + windowweekday + articles, data = wW_supplier_po_measures)}
 #lm4 <- lm(formula = w_mean_day_in_window ~cluster + windowweekday + sqrt(articles), data = wW_supplier_po_measures[wW_supplier_po_measures$avg_w_mean_day_in_window<40&wW_supplier_po_measures$avg_w_mean_day_in_window>-30,])
        
-openPO.forecast$treepredict <- predict(treepruned,data.frame("cluster"=openPO.forecast$cluster, "windowweekday"=openPO.forecast$windowweekday, "articles"=openPO.forecast$articles))
+openPO.forecast$lmpredict <- predict(rlm,data.frame("cluster"=openPO.forecast$cluster, "windowweekday"=openPO.forecast$windowweekday, "articles"=openPO.forecast$articles))
 
-openPO$f_arrival <- openPO$earliest_delivery_date+round(openPO.forecast$treepredict,0)
+openPO$f_arrival <- openPO$earliest_delivery_date+round(openPO.forecast$lmpredict,0)
 openPO$pastwindow <- ifelse(openPO$f_arrival<maxdate,as.numeric(maxdate-openPO$latest_delivery_date),NA)
 
 #negative numbers in pastwindow mean we are still in the window, but the rf-forecast was too early
@@ -70,7 +70,7 @@ openPO$f_arrival <- as.Date(openPO$f_arrival)
     openPOshaped$openq <- openPOshaped$q_sum-openPOshaped$fq_sum
     maxcols <- apply(openPO[,10:29],1,FUN = which.max)
     openPOshaped$maxCG <- join(data.frame("id"=maxcols), data.frame("id"=1:19, lev[1:19]))$lev
-    setnames(openPOshaped,1:11, c("PO","Supplier","Earliest DD", "Latest DD", "Season","Order Type", "Quantity","Fulfilled Quantity", "Estimated Arrival", "Open Quantity", "max Articles in CG"))
+    setnames(openPOshaped,1:11, c("PO","Supplier","Earliest DD", "Latest DD", "Season","Order Type", "Quantity","Fulfilled quantity", "Estimated arrival", "Open quantity", "max articles in CG"))
     openPOshaped<-openPOshaped[c(1:4,9,7,8,10,11,6,5)]
     openPOshaped <- openPOshaped[order(openPOshaped[,5]),]
 
@@ -156,10 +156,6 @@ supplier_measures <- supplier_measures[with(supplier_measures, order(-ArticleSha
 # supplier_order_type_measures  <- supplier_order_type_measures[with(supplier_order_type_measures, order(supplier_id)), ]
 
 
-
-
-
-
 #-------------------------------------------------------------
 #outgoing
 
@@ -197,10 +193,20 @@ DEshipped <- subset(c_shipping_table, c_shipping_table$shipping_country == "DE")
 NLshipped <- subset(c_shipping_table, c_shipping_table$shipping_country=="NL")$shipped
 ATshipped <- subset(c_shipping_table, c_shipping_table$shipping_country=="AT")$shipped
 CHshipped <- subset(c_shipping_table, c_shipping_table$shipping_country=="CH")$shipped
+DKshipped <- subset(c_shipping_table, c_shipping_table$shipping_country=="DK")$shipped
+LUshipped <- subset(c_shipping_table, c_shipping_table$shipping_country=="LU")$shipped
+SEshipped <- subset(c_shipping_table, c_shipping_table$shipping_country=="SE")$shipped
 setnames(c_shipping_table, "shipping_country", "Country")
 
 
-countrystarts <- data.frame("DE"=as.Date("2013-07-01", "%Y-%m-%d"),"NL"=as.Date("2014-04-01", "%Y-%m-%d"),"CH"=as.Date("2013-09-09", "%Y-%m-%d"),"AT"=as.Date("2014-07-01", "%Y-%m-%d") )
+countrystarts <- data.frame("DE"=as.Date("2013-07-01", "%Y-%m-%d"),
+							"NL"=as.Date("2014-04-01", "%Y-%m-%d"),
+							"CH"=as.Date("2013-09-09", "%Y-%m-%d"),
+							"AT"=as.Date("2014-07-01", "%Y-%m-%d"),
+							#ADJUST THESE TO BE CORRECT
+							"DK"=as.Date("2014-09-01", "%Y-%m-%d"),
+							"LU"=as.Date("2014-09-01", "%Y-%m-%d"),
+							"SE"=as.Date("2014-09-01", "%Y-%m-%d") )
 
 DEtimeseries <- ts(data=DEshipped, start(1,7), frequency = 7)
 ATtimeseries <- ts(ATshipped, start(1,7), frequency = 7)
@@ -208,8 +214,12 @@ ATtimeseries <- ts(ATshipped, start(1,7), frequency = 7)
 NLtimeseries <- ts(NLshipped[-c(1: as.numeric(countrystarts["NL"]-countrystarts["DE"])) ] , start(1,7), frequency = 7)
 #since 9th Sep 2013
 CHtimeseries <- ts(CHshipped[-c(1: as.numeric(countrystarts["CH"]-countrystarts["DE"])) ], start(1,7), frequency = 7)
+#?since 1st Sep 2014?
+DKtimeseries <- ts(DKshipped[-c(1: as.numeric(countrystarts["DK"]-countrystarts["DE"])) ], start(1,7), frequency = 7)
+LUtimeseries <- ts(LUshipped[-c(1: as.numeric(countrystarts["LU"]-countrystarts["DE"])) ], start(1,7), frequency = 7)
+SEtimeseries <- ts(SEshipped[-c(1: as.numeric(countrystarts["SE"]-countrystarts["DE"])) ], start(1,7), frequency = 7)
 
-Ttimeseries <- ts(data=DEshipped+NLshipped+ATshipped+CHshipped, start(1,7),frequency = 7)
+Ttimeseries <- ts(data=DEshipped+NLshipped+ATshipped+CHshipped+DKshipped+LUshipped+SEshipped, start(1,7),frequency = 7)
 #/ADJUST
 
 ###age

@@ -44,9 +44,9 @@ getsaleschannel <- function(data){
 	ifelse(
 		sum(c_age_sales_channeltable[c_age_sales_channeltable$age == data[1] & c_age_sales_channeltable$country == as.character(data[2]),]$Freq) == 0,
 		ifelse(data[1] > 60, 
-		df <- c_age_sales_channeltable_complete[c_age_sales_channeltable_complete$age == 60 & c_age_sales_channeltable_complete$country == "DE", ],
-		df <- c_age_sales_channeltable_complete[c_age_sales_channeltable_complete$age == data[1] & c_age_sales_channeltable_complete$country == "DE", ]),
-		df <- c_age_sales_channeltable[c_age_sales_channeltable$age == data[1] & c_age_sales_channeltable$country == as.character(data[2]), ]
+			df <- c_age_sales_channeltable_complete[c_age_sales_channeltable_complete$age == 60 & c_age_sales_channeltable_complete$country == "DE", ],
+			df <- c_age_sales_channeltable_complete[c_age_sales_channeltable_complete$age == data[1] & c_age_sales_channeltable_complete$country == "DE", ])
+		,df <- c_age_sales_channeltable[c_age_sales_channeltable$age == data[1] & c_age_sales_channeltable$country == as.character(data[2]), ]
 		)
 	
 	levels(c_age_sales_channeltable$sales_channel)[sample(1:length(levels(c_age_sales_channeltable$sales_channel)), replace =TRUE, size = 1, prob = df$Freq)]
@@ -241,7 +241,10 @@ b <- data.table(data)[, list("total" = sum(shipped)), by = list(date)]
                  b.2 <- data.table(data[data$country=="AT",])[, list("total" = sum(shipped)), by = list(date)]
                  b.3 <- data.table(data[data$country=="CH",])[, list("total" = sum(shipped)), by = list(date)]
                  b.4 <- data.table(data[data$country=="NL",])[, list("total" = sum(shipped)), by = list(date)]
-                 data.frame( b,"DE"= b.1$total,"AT"= b.2$total, "CH" =b.3$total, "NL" =b.4$total)
+                 b.5 <- data.table(data[data$country=="DK",])[, list("total" = sum(shipped)), by = list(date)]
+                 b.6 <- data.table(data[data$country=="LU",])[, list("total" = sum(shipped)), by = list(date)]
+                 b.7 <- data.table(data[data$country=="SE",])[, list("total" = sum(shipped)), by = list(date)]
+                 data.frame( b,"DE"= b.1$total,"AT"= b.2$total, "CH" =b.3$total, "NL" =b.4$total, "DK"=b.5$total, "LU"=b.6$total, "SE"=b.7$total)
 }
 
 shipped.data <- function(start, end){
@@ -273,7 +276,11 @@ displayfutureoverview <- function(length){
                  b.2 <- data.table(a[a$country=="AT",])[, list("total" = sum(m)), by = list(f_shipping_date)]
                  b.3 <- data.table(a[a$country=="CH",])[, list("total" = sum(m)), by = list(f_shipping_date)]
                  b.4 <- data.table(a[a$country=="NL",])[, list("total" = sum(m)), by = list(f_shipping_date)]
-                 data.frame( b,"DE"= b.1$total,"AT"= b.2$total, "CH" =b.3$total, "NL" =b.4$total)
+                 b.5 <- data.table(a[a$country=="DK",])[, list("total" = sum(m)), by = list(f_shipping_date)]
+                 b.6 <- data.table(a[a$country=="LU",])[, list("total" = sum(m)), by = list(f_shipping_date)]
+                 b.7 <- data.table(a[a$country=="SE",])[, list("total" = sum(m)), by = list(f_shipping_date)]
+
+                 data.frame( b,"DE"= b.1$total,"AT"= b.2$total, "CH" =b.3$total, "NL" =b.4$total,"DK" =b.5$total,"LU" =b.6$total,"SE" =b.7$total)
                  
 }
 
@@ -337,20 +344,25 @@ getfutureboxes <- function ( df){
 	df$char_country <- as.character(df$country)
 	df$id <- 1:dim(df)[1]
 	df <- data.table(df)[, list(f_shipping_date, country,char_country ,age = getagesamples(shipping_country = char_country, size = m)), by = id]
+	df <-df[!is.na(df$age),] #if there are no shippings for a country on a day, age is NA. 
 	df$id <- 1:dim(df)[1]
 	df <- cbind(df, sales_channel = apply(data.frame(df)[c(5,4)], MARGIN=1,FUN=getsaleschannel))
 	df <- cbind(df, articles_shipped = apply(data.frame(df)[6], MARGIN=1, FUN=getbasketsize))
 	df$month <- format.Date(df$f_shipping_date, "%m")
 	df$day <- as.numeric(df$f_shipping_date-max(shipping_table$days))
 	df <-  join(df, df[, cbind(getComposition(sales_channel, as.character(month), articles_shipped)), by = id])
-	#weekend adjustments to the previous Friday, because it will be included definitely. The following monday may not
+	#weekend shifted to the previous Friday
 	data.frame(df)
 	#df$weekday <- weekdays(df$f_shipping_date)
 	
 }
 
 getreturntime<-function(data){
-    sample(1:30,prob = returntimetable[returntimetable$weekday==data[1] & returntimetable$shipping_country==data[2],]$Freq,size = 1 )
+	#new countries do not have enough data, that is why we pick NL
+	ifelse(sum(returntimetable[returntimetable$weekday==data[1] & returntimetable$shipping_country==data[2],]$Freq)<20,
+		sample(1:30,prob = returntimetable[returntimetable$weekday==data[1] & returntimetable$shipping_country=="NL",]$Freq,size = 1 ),
+    sample(1:30,prob = returntimetable[returntimetable$weekday==data[1] & returntimetable$shipping_country==data[2],]$Freq,size = 1 ))
+
 
 }
 #pick the returned articles
@@ -420,8 +432,6 @@ getreturnCG <- function(data, meanlog, sdlog){
 	subsetreturns
 }
 getreturndata.open <- function(data, manual=FALSE, prob){
-    #Attention to language settings
-    #check quantile logic again
     if(manual==TRUE){
     data<-getreturnestimations.manual(data, prob[1],prob[2])
     	}else{
@@ -430,7 +440,7 @@ getreturndata.open <- function(data, manual=FALSE, prob){
     data$weekday <- factor(weekdays(data$date_shipped))
     data<- cbind(data, "returntime"=apply(data.frame(data$weekday,data$shipping_country), MARGIN = 1, FUN = getreturntime))
     
-    data$isreturned <- ifelse(data$returntime>data$orderage,TRUE,FALSE)
+    data$isreturned <- ifelse(data$returntime>=data$orderage,TRUE,FALSE)
     data$returnclass <- ifelse(data$isreturned == FALSE, "N", data$returnclass)
     data$returnclass <- factor(data$returnclass)
     subs <- data[,c(1,2,11,11,12,8,18,7,62,20:29,32:33,35:38,67,69)]
@@ -584,7 +594,7 @@ d<-data.table(data)[, list(
  c_Unterbekleidung = sum(c_Unterbekleidung)
 	), by=datestr]
 }
-		#f_arrvial_[rsf,rlm]
+	
 		d <- data.frame(d)
 		d[order(d[,1]), ]
 
@@ -607,21 +617,47 @@ compareoutgoingforecast.data <- function (h){
 	ATstlforecast <- stlf(x =ATtimeseries, s.window = "periodic", h = h, robust =TRUE, method ="ets", etsmodel ="AAN")
 	NLstlforecast <- stlf(x =NLtimeseries, s.window = "periodic", h = h, robust =TRUE, method ="ets", etsmodel ="AAN")
 	CHstlforecast <- stlf(x =CHtimeseries, s.window = "periodic", h = h, robust =TRUE, method ="ets", etsmodel ="AAN")
-
+  
 	DEholtforecast <- forecast.HoltWinters(HoltWinters(DEtimeseries), h = h)
 	ATholtforecast <- forecast.HoltWinters(HoltWinters(ATtimeseries), h = h)
 	NLholtforecast <- forecast.HoltWinters(HoltWinters(NLtimeseries), h = h)
 	CHholtforecast <- forecast.HoltWinters(HoltWinters(CHtimeseries), h = h)
+	DKstlforecast  <- data.frame(matrix(ncol=5, nrow = h,0))
+	DKholtforecast  <- data.frame(matrix(ncol=5, nrow = h,0))
+	LUstlforecast  <- data.frame(matrix(ncol=5, nrow = h,0))
+	LUholtforecast  <- data.frame(matrix(ncol=5, nrow = h,0))
+	SEstlforecast <- data.frame(matrix(ncol=5, nrow = h,0))
+	SEholtforecast  <- data.frame(matrix(ncol=5, nrow = h,0))
+  setnames(DKstlforecast,1:5,c("Point.Forecast",    "Lo.80"  , "Hi.80"   , "Lo.95"    ,"Hi.95"))
+  setnames(DKholtforecast,1:5,c("Point.Forecast",    "Lo.80"  , "Hi.80"   , "Lo.95"    ,"Hi.95"))
+	setnames(LUstlforecast,1:5,c("Point.Forecast",    "Lo.80"  , "Hi.80"   , "Lo.95"    ,"Hi.95"))
+	setnames(LUholtforecast,1:5,c("Point.Forecast",    "Lo.80"  , "Hi.80"   , "Lo.95"    ,"Hi.95"))
+	setnames(SEstlforecast,1:5,c("Point.Forecast",    "Lo.80"  , "Hi.80"   , "Lo.95"    ,"Hi.95"))
+	setnames(SEholtforecast,1:5,c("Point.Forecast",    "Lo.80"  , "Hi.80"   , "Lo.95"    ,"Hi.95"))
+  
+  if(length(DKstlforecast)>15){DKstlforecast <- stlf(x =DKtimeseries, s.window = "periodic", h = h, robust =TRUE, method ="ets", etsmodel ="AAN")
+                               DKholtforecast <- forecast.HoltWinters(HoltWinters(DKtimeseries), h = h)
+                          }
+	if(length(LUstlforecast)>15){LUstlforecast <- stlf(x =LUtimeseries, s.window = "periodic", h = h, robust =TRUE, method ="ets", etsmodel ="AAN")
+	                             LUholtforecast <- forecast.HoltWinters(HoltWinters(LUtimeseries), h = h)
+	                       }
+	if(length(SEstlforecast)>15){SEstlforecast <- stlf(x =SEtimeseries, s.window = "periodic", h = h, robust =TRUE, method ="ets", etsmodel ="AAN")
+	                             SEholtforecast <- forecast.HoltWinters(HoltWinters(SEtimeseries), h = h)
+	                       }
 
 	dfForecast <- rbind( 	data.frame(DEstlforecast, DEholtforecast), 
 						 	data.frame(ATstlforecast, ATholtforecast),
  							data.frame(NLstlforecast, NLholtforecast),
-							data.frame(CHstlforecast, CHholtforecast))
+							data.frame(CHstlforecast, CHholtforecast),
+							data.frame(DKstlforecast, DKholtforecast),
+							data.frame(LUstlforecast, LUholtforecast),
+							data.frame(SEstlforecast, SEholtforecast)
+							)
 	colnames(dfForecast) <- c("stl", "stl80l","stl80h","stl95l","stl95h","holt","holt80l","holt80h","holt95l","holt95h")
 
-	#ADJUST NUMBER
-	dfForecast$day <- rep(1:h, 4)
-	dfForecast$country <- c(rep("DE", h), rep("AT", h), rep("NL", h ), rep("CH", h ))
+	#ADJUST NUMBER IN SECOND PARAMETER AS WELL
+	dfForecast$day <- rep(1:h, 7)
+	dfForecast$country <- c(rep("DE", h), rep("AT", h), rep("NL", h ), rep("CH", h ),rep("DK",h),rep("LU",h),rep("SE",h))
 	dfForecast$country <- factor(dfForecast$country)
 	dfForecast
 }
@@ -672,18 +708,18 @@ decomp2.data <- function(series, frequency, country, thelastxdays){
  }
 
 
-PRESSlm <- function (data) 
-{
-    predictions <- 0
-    for (i in 1:nrow(data)) {
-        
-        newDATA <- data[-i, ]
-   		mod <- lm(formula = w_mean_day_in_window ~ cluster + windowweekday + articles, data = newDATA  )
-        pred <- predict(mod, data[i,])
-        predictions <- c(predictions, pred)
-    }
-    sum((data$w_mean_day_in_window-predictions[-1])^2)
-}
+#PRESSlm <- function (data) 
+#{
+#    predictions <- 0
+#    for (i in 1:nrow(data)) {
+#        
+#        newDATA <- data[-i, ]
+#   		mod <- lm(formula = w_mean_day_in_window ~ cluster + windowweekday + articles, data = newDATA  )
+#        pred <- predict(mod, data[i,])
+#        predictions <- c(predictions, pred)
+#    }
+#    sum((data$w_mean_day_in_window-predictions[-1])^2)
+#}
 #PRESS
 #lm 33083.86
 #lm log 33454.92
@@ -692,18 +728,18 @@ PRESSlm <- function (data)
 #tree 38743.29
 #tree pruned size = 6 26820.61
 
-PRESStree <- function (data) 
-{
-    predictions <- 0
-    for (i in 1:nrow(data)) {
-        
-        newDATA <- data[-i, ]
-   		mod <- tree(formula = w_mean_day_in_window ~ cluster + windowweekday + articles, data = newDATA  )
-   		mod <- prune.tree(mod, best = 8)
-        pred <- predict(mod, data[i,])
-        predictions <- c(predictions, pred)
-    }
-    sum((data$w_mean_day_in_window-predictions[-1])^2)
-}
+#PRESStree <- function (data) 
+#{
+#    predictions <- 0
+#    for (i in 1:nrow(data)) {
+#        
+#        newDATA <- data[-i, ]
+#   		mod <- tree(formula = w_mean_day_in_window ~ cluster + windowweekday + articles, data = newDATA  )
+#   		mod <- prune.tree(mod, best = 8)
+#        pred <- predict(mod, data[i,])
+#        predictions <- c(predictions, pred)
+#    }
+#    sum((data$w_mean_day_in_window-predictions[-1])^2)
+#}
 
 

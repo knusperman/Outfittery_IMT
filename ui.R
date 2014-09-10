@@ -18,7 +18,7 @@ shinyUI(navbarPage("Inventory Management Tool",
                                                            "There are currently ", code(length(unique(openPO$purchase_order_id))), "open Purchase Orders in the data", br(),
                                                            code(length(unique(openPO[openPO$earliest_delivery_date<=Sys.Date() & openPO$latest_delivery_date>=maxdate,]$purchase_order_id))), "delivery windows are open for the ", maxdate,br(),
                                                            code(sum(ifelse(openPO[!is.na(openPO$pastwindow),]$pastwindow>0,1,0))), "delivery windows are closed, but we are still missing articles", br(),
-                                                           "These missing articles sum up to",code(sum(ifelse(openPO[!is.na(openPO$pastwindow),]$pastwindow>0,openPO[!is.na(openPO$pastwindow),]$q_sum-openPO[!is.na(openPO$pastwindow),]$fq_sum,0))),
+                                                           "These missing articles sum up to",code(sum(openPOshaped[openPOshaped$`Latest DD` < maxdate, ]$`Open quantity`)),
                                                            "and are added to the forecast of the next seven days."
                                                            
                                                            ))
@@ -110,7 +110,8 @@ shinyUI(navbarPage("Inventory Management Tool",
                                   strong("Level:"), textOutput("HelperForecastLevel"), br(), 
                                   strong("Calculation time:"), textOutput("HelperForecastCalculationTime"),br(),
                                   strong("Model:"), textOutput("HelperForecastModel"),br(),
-                                  strong("Description:"),textOutput("HelperForecastDescription"),br()
+                                  strong("Description:"),textOutput("HelperForecastDescription"),br(),
+                                  downloadButton("downloadingingForecastSummary")
                                   
                                   
                              
@@ -159,6 +160,7 @@ shinyUI(navbarPage("Inventory Management Tool",
                               ),
                               tabPanel("CG Overview (Daily level)"   , downloadButton("downloadingincCGData","Download"), br(),
                                        "Here we see the expected incoming quantities for every CG in the next days.",br(),
+                                       "alskdfosefeösf",br(),
                                        dataTableOutput("poCGdata")
                               ),
                               tabPanel("Supplier Analysis",br(),
@@ -168,6 +170,7 @@ shinyUI(navbarPage("Inventory Management Tool",
                               tabPanel("Delivery Window Analysis",
                                        plotOutput("DeliveryWindowGraph"),br(),
                                        "This visualization shows the (weighted average) delivery day of a PO partition as percentage of the delivery window. The dashed lines indicate the range of the window.",br(),
+                                       "balbalblab",br(),
                                        dataTableOutput("DeliveryWindowData")
                             ),
                             tabPanel("About the model",wellPanel(
@@ -191,7 +194,9 @@ shinyUI(navbarPage("Inventory Management Tool",
                                          h3("Forecasting Options"),
                                          #textOutput("test"),
                                           dateRangeInput("thelastxdate", "Select date",start= maxdate-15,  end = maxdate ,max = maxdate ),
-                                         selectInput("countryinput", "Country", list("DE"=1,"AT"=2,"CH"=3,"NL"=4, "Total" = 5),1 ),br(),
+                                         #ADJUST
+                                         selectInput("countryinput", "Country", list("DE"=1,"AT"=2,"CH"=3,"NL"=4,"DK"=5,"LU"=6,"SE"=7, "Total" = 8),1 ),br(),
+                                         #/ADJUST
                                          "Here we can analyze time series. The historic data can be decomposed mathematically into a seasonal and trend component. ",br(),
                                          "Everything that is left over is put into the remainder, meaning that we can sum up the components to get the real value", br(), 
                                          "Notice that the scales are different for every facet. To forecast go to ",em("Model Forecast Comparison")
