@@ -1,8 +1,8 @@
-suppliers <- read.csv2(		file = paste(path, "data/supplier.csv"), sep =";")[c(1,3)]
-openPO <- read.csv2(		file = paste(path,"data/open_po.csv"), sep = ";")
-outgoingdata  <- read.csv2(	file = paste(path,"data/outgoing.csv"), sep = ";")
-incomingdata  <- read.csv2(	file = paste(path,"data/incoming.csv"), sep = ";" )
-inventory <- read.csv2(		file = paste(path,"data/inventory.csv"), sep = ";")
+suppliers <- read.csv2(		file =  "data/supplier.csv", sep =";")[c(1,3)]
+openPO <- read.csv2(		file = "data/open_po.csv", sep = ";")
+outgoingdata  <- read.csv2(	file = "data/outgoing.csv", sep = ";")
+incomingdata  <- read.csv2(	file = "data/incoming.csv", sep = ";" )
+inventory <- read.csv2(		file = "data/inventory.csv", sep = ";")
 #----------------------------------------------------------------------------------
 setnames(suppliers,1:2,c("supplier_id", "name"))
 
