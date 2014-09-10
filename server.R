@@ -55,9 +55,9 @@ shinyServer(function(input, output, session) {
   
   Scenariolist <- reactive({
     if(input$ScenarioExecute != 0 ){
-     # if(as.numeric(input$ScenarioPF)+as.numeric(input$ScenarioPP)+as.numeric(input$ScenarioPN) == 1){
-        scenario(length = as.numeric(isolate(input$ScenarioForecastrange[2])-maxdate,unit ="days") ,amplifier = as.numeric(isolate(input$ScenarioOrderAmplifier)) ,includeopenreturns = isolate(input$IncludeOpenReturns),manualreturns = TRUE  ,prob = c(as.numeric(isolate(input$ScenarioPN)), as.numeric(isolate(input$ScenarioPF)))) 
-  #    }
+
+        scenario(length = as.numeric(isolate(input$ScenarioForecastrange[2])-maxdate,unit ="days") ,amplifier = as.numeric(isolate(input$ScenarioOrderAmplifier)) ,includeopenreturns = isolate(input$IncludeOpenReturns),manualreturns = TRUE  ,prob = c(as.numeric(isolate(input$scenarioslider3))/100, as.numeric(isolate(input$scenarioslider1))/100)) 
+
     }
 
   })
@@ -365,11 +365,11 @@ output$customeragedistribution <- renderPlot(
 ))
 
 output$scenarioslider3 <- renderUI({
-  sliderInput("scenarioslider3", "Slider 3", min = 0,  max = 100, value = 100-input$scenarioslider1-input$scenarioslider2)  
+  sliderInput("scenarioslider3", "Probability for a not returned box", min = 0,  max = 100, value = 100-input$scenarioslider1-input$scenarioslider2)  
 })
 
 
-output$probalarm <- renderText(if(as.numeric(input$scenarioslider1)+as.numeric(input$scenarioslider2)+as.numeric(input$scenarioslider3)>100){"STOP"})
+output$probalarm <- renderText(if(as.numeric(input$scenarioslider1)+as.numeric(input$scenarioslider2)+as.numeric(input$scenarioslider3)>100){"STOP! SUM MUST BE 100!"})
 
   output$ScenarioOverviewTable <- renderDataTable({
       x <- Scenariolist()[[1]]
@@ -383,8 +383,11 @@ output$probalarm <- renderText(if(as.numeric(input$scenarioslider1)+as.numeric(i
   })
 output$ScenarioSidebar <- renderDataTable({
   x <- Scenariolist()
-  x[[2]]
-}, options = list(bFilter =FALSE, bPaginate =FALSE))
+  x <- x[[2]]
+  if(is.data.frame(x)){
+  setnames(x, 1:3, c("country", "date","shipped"))
+  x}}, options = list( iDisplayLength =10, aoColumns = list(list(bSearchable = TRUE), list(bSearchable =FALSE), list(bSearchable=FALSE)))
+)
 
 
   
