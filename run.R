@@ -27,3 +27,4 @@ source("/Volumes/Nifty/R/Outfittery Inventory Management/Outfittery_IMT/import.R
 source("/Volumes/Nifty/R/Outfittery Inventory Management/Outfittery_IMT/functions.R")
 source("/Volumes/Nifty/R/Outfittery Inventory Management/Outfittery_IMT/extra.R")
 shiny::runApp("/Volumes/Nifty/R/Outfittery Inventory Management/Outfittery_IMT/")
+#runGitHub("Outfittery_IMT","knusperman")
