@@ -139,7 +139,7 @@ shinyUI(navbarPage("Inventory Management Tool",
                                             #  textInput("ScenarioPP","Probability for a partially returned Box", value = round(1-returnratio[returnratio$Var1 ==paste(year(today()-90),quarters(today()-90) ,sep = " ") & returnratio$Var2 == "F", ]$Freq /sum(returnratio[returnratio$Var1 ==paste(year(today()),quarters(today()) ,sep = " ") & returnratio$Var2 != "N", ]$Freq)-returnratio[returnratio$Var1 ==paste(year(today()-90),quarters(today()-90) ,sep = " ") & returnratio$Var2 == "N", ]$Freq,2)),
                                             #  textInput("ScenarioPN","Probability for a not returned Box", value = round(returnratio[returnratio$Var1 ==paste(year(today()-90),quarters(today()-90) ,sep = " ") & returnratio$Var2 == "N", ]$Freq,2)),
                                               sliderInput("scenarioslider1", "Probability for a completely returned box ",min = 0,max=100,value = 100*round(returnratio[returnratio$Var1 ==paste(year(today()-90),quarters(today()-90) ,sep = " ") & returnratio$Var2 == "F", ]$Freq/ sum(returnratio[returnratio$Var1 ==paste(year(today()),quarters(today()) ,sep = " ") & returnratio$Var2 != "N", ]$Freq),2)),
-                                              sliderInput("scenarioslider2", "Probability for a partially returned box", min=0,max=100, value = round(100-100*returnratio[returnratio$Var1 ==paste(year(today()-90),quarters(today()-90) ,sep = " ") & returnratio$Var2 == "F", ]$Freq /sum(returnratio[returnratio$Var1 ==paste(year(today()),quarters(today()) ,sep = " ") & returnratio$Var2 != "N", ]$Freq)-returnratio[returnratio$Var1 ==paste(year(today()-90),quarters(today()-90) ,sep = " ") & returnratio$Var2 == "N", ]$Freq,2)),
+                                              sliderInput("scenarioslider2", "Probability for a partially returned box", min=0,max=100, value = round(100-100*returnratio[returnratio$Var1 ==paste(year(today()-90),quarters(today()-90) ,sep = " ") & returnratio$Var2 == "F", ]$Freq /sum(returnratio[returnratio$Var1 ==paste(year(today()),quarters(today()) ,sep = " ") & returnratio$Var2 != "N", ]$Freq)-returnratio[returnratio$Var1 ==paste(year(today()-90),quarters(today()-90) ,sep = " ") & returnratio$Var2 == "N", ]$Freq-100*round(returnratio[returnratio$Var1 ==paste(year(today()-90),quarters(today()-90) ,sep = " ") & returnratio$Var2 == "N", ]$Freq,2),2)),
                                               uiOutput("scenarioslider3"),
                                               strong(textOutput("probalarm")),
                                               
@@ -223,10 +223,24 @@ shinyUI(navbarPage("Inventory Management Tool",
                                        plotOutput("CGmonthchanges")
                                        
                                        #plotout
-                              )
+                              ),
+                              tabPanel("About", wellPanel(
+                                "This forecast is made on two levels. ",br(),
+                                "First, the daily CO shippings are forecasted. This does not need much calculation time. The tab ", em("Forecast Model Comparison"), " helps to understand the prediction and the ",em("History"), "tab decomposes the time series into its parts.", br(),
+                                "Now it gets complicated. The tool models every forecasted order in a unique way. This means that we sample attributes for every forecasted order and based on the attributes, we estimate the composition of CGs.", br(),
+                                "To do so, we use empiricial data to sample :",br(), strong("customer age"), " based on the shipping country, ",br(), strong("sales channel"), " based on shipping country and customer age", br(),
+                                strong("basket size"), "based on sales channel.",br(),br(),
+                                "We now try to find a past CO that fits the shipping month (because the CGs vary through the months, see ",em("Monthly changes in CO composition"), ") the sampled basket size and sales channel", br(),
+                                "We randomly pick one of the orders that has these attributes and copy its Commodity Group composition to our forecasted order. This step is repeated ", strong("for every order in the forecast"), "and is the reason for the long calculation time.",br(),
+                                "For more information about the picking of the attributes and their dependencies, check out the thesis."
+                                
+                            
+                                
+                                
+                                ))
                    ),
                    navbarMenu("Returns",
-                              tabPanel("Table",
+                              tabPanel("Forecast Returns",
                                        dataTableOutput("returnTable")
                               ),
                               tabPanel("Open Returns",
@@ -246,7 +260,19 @@ shinyUI(navbarPage("Inventory Management Tool",
                                             plotOutput("returndistributionsplitbyweekday")))
                               ),
                         
-                              tabPanel("About")
+                              tabPanel("About",wellPanel(
+                                "The returns are split into two sections. ", em("Open Returns"), " shows orders that are in state 128 or 256, which means they have been shipped in the last days and we do not know if they get returned. ", br(),
+                                "The returns from the forecast are in the ",em("Forecast Returns"), " tab. These are the returns of the orders we think we ship in future.",br(),br(),
+                                "The return model works with two generalized linear models that do binary classification (called logisitic regression). These do the prediction in two steps. ",br(),
+                                "Covariates for these prediction are the customer age, the shipping country and the articles in the box.",br(),br(),
+                                "Model1 estimates whether an order HAS ANY returned articles(return class P or F) or not (N).",br(),
+                                "Model2 estimates for the as returned marked Customer Orders from the previous model if they are a full return (F) or a partial return (P)",br(),
+                                "The thresholds for splitting between one class or the other is based on the return ratio of the last quarter. This is a safety measure, so that the models are not allowed to classify returns in an unusal way. See ", em("Return probabilites"), " in Misc for details",
+                                br(), "After this we know the class of the return, but we still need to find out how many articles in a class P return will be returned.",br(),
+                                "The amount of returned articles (if we just look at partial returns) can be described with a lognormal distribution. See the thesis for more details. We sample lognormal random variables to determine the amount of returned articles and perform drawing without replacement on the shipped articles to get the returned ones.",
+                                br(),br(),
+                                "The return time is sampled based on empiricial data and depends on the shipping country and the weekday of shipment."
+                              ))
                    ),
                    navbarMenu("Inventory",
                               tabPanel("History",
@@ -282,7 +308,14 @@ shinyUI(navbarPage("Inventory Management Tool",
                                ),
                                 
                               
-                              tabPanel("About")
+                              tabPanel("About",
+                                       wellPanel("The inventory is split into Commodity Groups. We can browse through past data in the ", em("History"), " tab. ", br(),
+                                                 "If we want to analyze our forecast for the inventory, we do this in the ",em("Forecast"), " tab in this section of the navigation bar.", br(),
+                                                 "Because there are ", em("dead"), "CGs and the sampling of orders does not do an inventory check in background, these are excluded in the sampling process of the outgoing forecast.", br(),
+                                                 "However, their returns based on current orders or POs is included.",
+                                                  "The following CGs are excluded in the sampling process: ", br(),strong("electronic cases"), br(), strong("cooperations"), br(), strong("formal wear accessories"), br()
+                                                 
+                                                 ))
                    ),
                    navbarMenu("Misc",
                               tabPanel("Customer Age Distribution",
@@ -297,8 +330,8 @@ shinyUI(navbarPage("Inventory Management Tool",
                                         )
                                        
                                        ),
-                              tabPanel("Sales Channel Distribution","tbd"
-                                       
+                              tabPanel("Return probabilities",
+                                       plotOutput("returnprobs")
                                        ),
                               tabPanel("Basket Size Distribution","tbd"
                                        )

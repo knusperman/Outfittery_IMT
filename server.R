@@ -368,6 +368,12 @@ output$scenarioslider3 <- renderUI({
   sliderInput("scenarioslider3", "Probability for a not returned box", min = 0,  max = 100, value = 100-input$scenarioslider1-input$scenarioslider2)  
 })
 
+output$returnprobs <- renderPlot({
+  rr <- returnratio
+  rr$class <- rr$Var2
+  levels(rr$class)<- c("Full return", "No return", "Partial return")
+  print(ggplot(rr, aes(x=Var1, y=Freq, fill = class, group = class, label = round(Freq,2)))+geom_area(alpha =0.6)+scale_y_continuous(breaks=seq(0,1,0.1))+xlab("time")+ylab("probability"))
+})
 
 output$probalarm <- renderText(if(as.numeric(input$scenarioslider1)+as.numeric(input$scenarioslider2)+as.numeric(input$scenarioslider3)>100){"STOP! SUM MUST BE 100!"})
 
