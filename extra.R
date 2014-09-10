@@ -45,7 +45,7 @@ openPO.forecast$cluster <- ifelse(is.na(openPO.forecast$cluster), names(t)[t == 
 
 #new models
 rlm <- lmrob(formula = w_mean_day_in_window ~ cluster + windowweekday + articles, data = wW_supplier_po_measures)
-if(rlm1$converged==FALSE){rlm <- lm(formula = w_mean_day_in_window ~ cluster + windowweekday + articles, data = wW_supplier_po_measures)}
+if(rlm$converged==FALSE){rlm <- lm(formula = w_mean_day_in_window ~ cluster + windowweekday + articles, data = wW_supplier_po_measures)}
 #lm4 <- lm(formula = w_mean_day_in_window ~cluster + windowweekday + sqrt(articles), data = wW_supplier_po_measures[wW_supplier_po_measures$avg_w_mean_day_in_window<40&wW_supplier_po_measures$avg_w_mean_day_in_window>-30,])
        
 openPO.forecast$lmpredict <- predict(rlm,data.frame("cluster"=openPO.forecast$cluster, "windowweekday"=openPO.forecast$windowweekday, "articles"=openPO.forecast$articles))

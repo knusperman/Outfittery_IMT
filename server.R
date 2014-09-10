@@ -1,28 +1,5 @@
 
-Sys.setlocale(category = "LC_ALL", "en_US.UTF-8")
 
-library(caret)
-library(data.table)
-library(datasets)
-library(e1071)
-library(forecast)
-library(graphics)
-library(grDevices)
-library(lattice)
-library(lubridate)
-library(MASS)
-library(plyr)
-library(stats)
-library(stinepack)
-library(timeDate)
-library(utils)
-library(zoo)
-library(reshape2)
-library(tree)
-library(robust)
-source("/Volumes/Nifty/R/Outfittery Inventory Management/Outfittery_IMT/import.R")
-source("/Volumes/Nifty/R/Outfittery Inventory Management/Outfittery_IMT/functions.R")
-source("/Volumes/Nifty/R/Outfittery Inventory Management/Outfittery_IMT/extra.R")
 CGcOnDayOpen <- getCGcOnDay(openPO, "f_arrival")
 monthlyCGint <- 0
 
@@ -293,7 +270,7 @@ shinyServer(function(input, output, session) {
                grid <- expand.grid("date" = seq(maxdate, maxdate+length, by ="days"))
               meltdf <- join(grid, meltdf)
               meltdf[is.na(meltdf$value)]$value<-0
-              print(ggplot(meltdf, aes(x=date, y = value))+geom_line()+facet_grid(variable~.))
+              print(ggplot(meltdf, aes(x=date, y = value))+geom_line()+facet_grid(variable~.,scales="free"))
              })
     }
     
