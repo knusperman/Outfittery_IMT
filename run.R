@@ -1,7 +1,7 @@
 #Shiny launch script
 #put into the same folder as the other files
 #the path to the data files has to adjusted in the import script before running
-
+path <- "Volumes/Nifty/R/Outfittery Inventory Management/"
 Sys.setlocale(category = "LC_ALL", "en_US.UTF-8")
 library(caret)
 library(data.table)
@@ -23,6 +23,7 @@ library(reshape2)
 library(tree)
 library(robust)
 library(shiny)
+
 source("/Volumes/Nifty/R/Outfittery Inventory Management/Outfittery_IMT/import.R")
 source("/Volumes/Nifty/R/Outfittery Inventory Management/Outfittery_IMT/functions.R")
 source("/Volumes/Nifty/R/Outfittery Inventory Management/Outfittery_IMT/extra.R")
