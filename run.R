@@ -1,12 +1,16 @@
 #Shiny launch script
-#put into the same folder as the other files
-#the path to the data files has to adjusted in the import script before running
+
+#the CSVs have to be in a subfolder of the following directory called "data"
 path <- "C:/Users/PS-309/Desktop/Outfittery_IMT-test"
+
 setwd(path)
+
 #Mac
 #Sys.setlocale(category = "LC_ALL", "en_US.UTF-8")
+
 #Windows
 Sys.setlocale("LC_ALL","English")
+
 library(caret)
 library(data.table)
 library(datasets)
