@@ -124,7 +124,11 @@ shinyServer(function(input, output, session) {
     
   },options = list(bFilter =FALSE))
   
-
+  output$deliverywindowstat1 <- renderText({round(100*sum(supplier_measures$po_not_in_window)/sum(supplier_measures$c),2)})
+  output$deliverywindowstat2 <- renderText({round(100*(sum(supplier_measures$articles_after_window)+sum(supplier_measures$articles_before_window))/sum(supplier_measures$sum_articles),2)})
+  output$deliverywindowstat3 <- renderText({sum(supplier_measures$articles_before_window)})
+  output$deliverywindowstat4 <- renderText({sum(supplier_measures$articles_after_window)})
+  
   output$downloadOpenPOData <- downloadHandler(
     filename = function() { 
       paste("openPO", '.csv', sep='') 
@@ -495,7 +499,7 @@ output$returnOpenReturns <- renderDataTable({
   y <- openreturns()
   
   y<- y[c(1,3,7,8,29,46,47,27)]
-  setnames(y,1:8,c("order id","Country","Articles shipped","Date shipped","eArticles returned ","eReturn time", "eDate returned ", "eReturn Class"))
+  setnames(y,1:8,c("order id","Country","Articles shipped","Date shipped","eArticles returned ","eReturn time", "eDate returned ", "eReturn class"))
   y[y$`eDate returned` > maxdate, ]
 })
 
@@ -536,6 +540,13 @@ else{print(qplot(y=1)+geom_text(label="                              No data ava
 }
 })
 
+output$partialreturnfit <- renderPlot({
+  partialreturns <- outgoing_basketsubset[outgoing_basketsubset$returnclass == "P", ]
+  partialreturns$percentageinv <- abs(partialreturns$articles_returned/partialreturns$articles_shipped-1)
+  fit <- fitdistr(partialreturns[partialreturns$articles_shipped>2,]$percentageinv ,densfun = "log-normal")
+  print(ggplot(partialreturns[partialreturns$articles_shipped>2,], aes(x = percentageinv))+geom_histogram(aes(y=..density..), fill ="cornsilk", color="grey60",binwidth=0.043)+xlab("Percentage of articles in a CO sold")+stat_function(geom="line",fun=dlnorm, args=list(meanlog = fit$estimate[1],sdlog=fit$estimate[2]))+annotate("text", label= paste("mu == ",round(fit$estimate[1],3)),parse=TRUE , x=0.8, y=1)+annotate("text", label= paste("sigma == ",round(fit$estimate[2],3)),parse=TRUE , x=0.8, y=0.75))
+  
+})
 
 output$cg1c <- renderText({Sinventoryondate()[,2]})
 output$cg1v <- renderText({Sinventoryondate()[,22]})

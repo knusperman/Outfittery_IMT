@@ -171,6 +171,10 @@ shinyUI(navbarPage("Inventory Management Tool",
                                        plotOutput("DeliveryWindowGraph"),br(),
                                        "This visualization shows the (weighted average) delivery day of a PO partition as percentage of the delivery window. The dashed lines indicate the range of the window.",br(),
                                        "balbalblab",br(),
+                                       textOutput("deliverywindowstat1",inline=TRUE), "% of all PO partitions were not delivered in the delivery window", br(),
+                                       textOutput("deliverywindowstat2",inline=TRUE), "% of all articles were not delivered out of the deliery window", br(),
+                                       textOutput("deliverywindowstat3",inline=TRUE), " of these were delivered too early", br(),
+                                       textOutput("deliverywindowstat4",inline=TRUE), " of these were delivered too late",
                                        dataTableOutput("DeliveryWindowData")
                             ),
                             tabPanel("About the model",wellPanel(
@@ -199,7 +203,7 @@ shinyUI(navbarPage("Inventory Management Tool",
                                          #/ADJUST
                                          "Here we can analyze time series. The historic data can be decomposed mathematically into a seasonal and trend component. ",br(),
                                          "Everything that is left over is put into the remainder, meaning that we can sum up the components to get the real value", br(), 
-                                         "Notice that the scales are different for every facet. To forecast go to ",em("Model Forecast Comparison")
+                                         "Notice that the scales are different for every facet. Because of the weekly seasonality, ",strong("the displayed data is always starting on a monday"),".  To forecast go to ",em("Model Forecast Comparison")
                               )),
                               tabPanel( "Forecast Model Comparison",
                                        mainPanel(h3("Forecast Model Comparison"),
@@ -333,8 +337,11 @@ shinyUI(navbarPage("Inventory Management Tool",
                               tabPanel("Return probabilities",
                                        plotOutput("returnprobs")
                                        ),
-                              tabPanel("Basket Size Distribution","tbd"
+                              tabPanel("Basket Size Distribution",
+                                     
+                                                  "Here we are just looking at the partial returns, meaning that 0 and 1 bins are omitted. We fit the lognormal distribution on it.",
+                                                  plotOutput("partialreturnfit")
                                        )
-                              
+                      
                    )
 ))
