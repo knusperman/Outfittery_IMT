@@ -269,7 +269,8 @@ shinyServer(function(input, output, session) {
                meltdf <- meltdf[meltdf$date <=maxdate+length, ]
                grid <- expand.grid("date" = seq(maxdate, maxdate+length, by ="days"))
               meltdf <- join(grid, meltdf)
-              meltdf[is.na(meltdf$value)]$value<-0
+              meltdf[is.na(meltdf$value),]$value<-0
+              levels(meltdf$variable)<-c("shipped Articles (CO)", "recieved Articles (PO)", "returned Articles (CO)")
               print(ggplot(meltdf, aes(x=date, y = value))+geom_line()+facet_grid(variable~.,scales="free"))
              })
     }
