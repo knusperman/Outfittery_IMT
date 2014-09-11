@@ -12,16 +12,49 @@ shinyServer(function(input, output, session) {
   forecastdata<- reactive(
     if( input$SForecastexecute!=0){
     
+    if(isolate(input$SForecastWeek==FALSE)){
+      switch(isolate(input$sRadioB),
+             #incoming only
+             "1" = {  d <-CGcOnDayOpen
+                      d <- d[d[,1] >= isolate(input$SForecastrange[1]) & d[,1]<=isolate(input$SForecastrange[2]),]
+                      d <- data.frame("expected Arrival" = d[1], "expected POs"=d[2], "expected Quantity" = d[3])
+                      colnames(d)<-c("expected Arrival","expected POs", "expected Quantity" )
+                      d
+             },
+    #outgoing country level
+    "2" = {shipped.data(as.Date(isolate(input$SForecastrange[1])),as.Date(isolate(input$SForecastrange[2])))
+    },
+    #outgoing order level
+    "3" = {
+      df <- inventoryForecast()[[1]]
+      df <- df[c(1,2,3,20,21,40,41)]
+      setnames(df,1:7,c("date","CO shipped", "Articles shipped", "PO recieved", "Articles recieved", "CO returned", "Articles returned"))
+      df
+    })
+             
+    }else{
     switch(isolate(input$sRadioB),
            #incoming only
            "1" = {  d <-CGcOnDayOpen
                     d <- d[d[,1] >= isolate(input$SForecastrange[1]) & d[,1]<=isolate(input$SForecastrange[2]),]
-                    d <- data.frame("expected Arrival" = d[1], "expected POs"=d[2], "expected Quantity" = d[3])
-                    colnames(d)<-c("expected Arrival","expected POs", "expected Quantity" )
+                    d <- data.frame(d[1], d[2],d[3])
+                    
+                    d$week <- paste(year(d$f_arrival),week(d$f_arrival),sep= " ")
+                    d<- data.table(d)[,list(date=min(f_arrival),`PO partitions` = sum(recievedPO), `expected quantity` = sum(recievedArticles)), by = week]
+                    #colnames(d)<-c("expected arrival","expected PO partitions", "expected quantity" )
+                    d <- data.frame(d)[c(1,2,3,4)]
+                    setnames(d, 1:4, c("Week", "start of week", "ePO partitions", "eQuantity"))
                     d
            },
            #outgoing country level
-           "2" = {shipped.data(as.Date(isolate(input$SForecastrange[1])),as.Date(isolate(input$SForecastrange[2])))
+           "2" = {d <- shipped.data(as.Date(isolate(input$SForecastrange[1])),as.Date(isolate(input$SForecastrange[2])))
+                  d$week <-  paste(year(d$date),week(d$date),sep= " ")
+                  #ADJUST
+                  d<- data.table(d)[,list(mindate = min(date), total = sum(total), DE=sum(DE),AT=sum(AT),CH=sum(CH),NL=sum(NL),DK=sum(DK),LU=sum(LU),SE=sum(SE)), by = week]
+                 setnames(d, 2, "start of week")
+                 
+                  #/ADJUST
+                  d
            },
            #outgoing order level
            
@@ -30,8 +63,13 @@ shinyServer(function(input, output, session) {
              df <- inventoryForecast()[[1]]
              df <- df[c(1,2,3,20,21,40,41)]
              setnames(df,1:7,c("date","CO shipped", "Articles shipped", "PO recieved", "Articles recieved", "CO returned", "Articles returned"))
+             df$week <-  paste(year(df$date),week(df$date),sep= " ")
+             df <- data.table(df)[,list(mindate = min(date), "CO shipped" = sum(`CO shipped`, na.rm=TRUE), "Articles shipped" = sum(`Articles shipped`, na.rm=TRUE),"PO partitions recieved" =  sum(`PO recieved`, na.rm=TRUE), "CO returned" = sum(`CO returned`, na.rm=TRUE), "Articles returned" = sum(`Articles returned`, na.rm=TRUE) ), by = week]
+             setnames(df, 2, "start of week")
              df
-           })
+            }
+    )
+    }
   })
   
   inventoryForecast <- reactive(
@@ -253,30 +291,66 @@ shinyServer(function(input, output, session) {
   output$forecastplot <- renderPlot({
     if( input$SForecastexecute!=0){
 
-      switch(isolate(input$sRadioB),
-             #incoming only
-             "1" = {  d <- CGcOnDayOpen
-                      d <- d[d[,1] >= isolate(input$SForecastrange[1])& d[,1]<=isolate(input$SForecastrange[2]),]
-                      d <- data.frame("expected Arrival" = d[1], "expected POs"=d[2], "expected Quantity" = d[3])
-                      colnames(d)<-c("expected Arrival","expected POs", "expected Quantity" )
-                      print(ggplot(d, aes(x = `expected Arrival`, y = `expected Quantity`))+geom_line(col="red"))
-             },
-             #outgoing country level
-             "2" = {print(shipped.plot(as.Date(isolate(input$SForecastrange[1])), as.Date(isolate(input$SForecastrange[2]))))
-             },
-             #full
-             "3" = {#selecting the right columns
-               df <- inventoryForecast()[[1]]
-               df <- df[c(1,3,21,41)]
-               length <- inventoryForecast()[[8]]
-               meltdf <- melt(df, id.vars=1)
-               meltdf <- meltdf[meltdf$date <=maxdate+length, ]
-               grid <- expand.grid("date" = seq(maxdate, maxdate+length, by ="days"))
-              meltdf <- join(grid, meltdf)
-              meltdf[is.na(meltdf$value),]$value<-0
-              levels(meltdf$variable)<-c("shipped Articles (CO)", "recieved Articles (PO)", "returned Articles (CO)")
-              print(ggplot(meltdf, aes(x=date, y = value))+geom_line()+facet_grid(variable~.,scales="free"))
-             })
+      if(isolate(input$SForecastWeek)==TRUE){
+        switch(isolate(input$sRadioB),
+               #incoming only
+               "1" = { 
+                        d <-CGcOnDayOpen
+                        d <- d[d[,1] >= isolate(input$SForecastrange[1]) & d[,1]<=isolate(input$SForecastrange[2]),]
+                        d <- data.frame(d[1], d[2],d[3])
+                        
+                        d$week <- paste(year(d$f_arrival),week(d$f_arrival),sep= " ")
+                        d<- data.table(d)[,list(mindate=min(f_arrival),`PO partitions` = sum(recievedPO), `expected quantity` = sum(recievedArticles)), by = week]
+                        #colnames(d)<-c("expected arrival","expected PO partitions", "expected quantity" )
+                       
+                        setnames(d, 1:4, c("Week","date", "ePO partitions", "eQuantity"))
+                        print(ggplot(d, aes(x = date, y = eQuantity))+geom_line(col="red")+ylab("recieved articles"))
+               },
+               #outgoing country level
+               "2" = {print(shipped.plot(as.Date(isolate(input$SForecastrange[1])), as.Date(isolate(input$SForecastrange[2])), week = TRUE))
+               },
+               #full
+               "3" = {#selecting the right columns
+                 df <- inventoryForecast()[[1]]
+                 df <- df[c(1,3,21,41)]
+                 length <- inventoryForecast()[[8]]
+                 meltdf <- melt(df, id.vars=1)
+                 meltdf <- meltdf[meltdf$date <=maxdate+length, ]
+                 grid <- expand.grid("date" = seq(maxdate, maxdate+length, by ="days"))
+                 meltdf <- join(grid, meltdf)
+                 meltdf[is.na(meltdf$value),]$value<-0
+                 levels(meltdf$variable)<-c("shipped Articles (CO)", "recieved Articles (PO)", "returned Articles (CO)")
+                 meltdf$week <- paste(year(meltdf$date), week(meltdf$date), sep = " ")
+                 dfw <- data.table(meltdf)[, list(date = min(date), value = sum(value)), by = list(week, variable)]
+                 print(ggplot(dfw, aes(x=date, y = value))+geom_line()+facet_grid(variable~.,scales="free"))
+               }
+        )
+        
+      }else{
+        switch(isolate(input$sRadioB),
+               "1" = {  d <- CGcOnDayOpen
+                        d <- d[d[,1] >= isolate(input$SForecastrange[1])& d[,1]<=isolate(input$SForecastrange[2]),]
+                        d <- data.frame("expected Arrival" = d[1], "expected POs"=d[2], "expected Quantity" = d[3])
+                        colnames(d)<-c("expected Arrival","expected POs", "expected Quantity" )
+                        print(ggplot(d, aes(x = `expected Arrival`, y = `expected Quantity`))+geom_line(col="red"))
+               },
+               #outgoing country level
+               "2" = {print(shipped.plot(as.Date(isolate(input$SForecastrange[1])), as.Date(isolate(input$SForecastrange[2]))))
+               },
+               #full
+               "3" = {#selecting the right columns
+                 df <- inventoryForecast()[[1]]
+                 df <- df[c(1,3,21,41)]
+                 length <- inventoryForecast()[[8]]
+                 meltdf <- melt(df, id.vars=1)
+                 meltdf <- meltdf[meltdf$date <=maxdate+length, ]
+                 grid <- expand.grid("date" = seq(maxdate, maxdate+length, by ="days"))
+                 meltdf <- join(grid, meltdf)
+                 meltdf[is.na(meltdf$value),]$value<-0
+                 levels(meltdf$variable)<-c("shipped Articles (CO)", "recieved Articles (PO)", "returned Articles (CO)")
+                 print(ggplot(meltdf, aes(x=date, y = value))+geom_line()+facet_grid(variable~.,scales="free"))
+               })
+         }
     }
     
     
@@ -285,7 +359,7 @@ shinyServer(function(input, output, session) {
   
 
   output$MFCdata <- renderDataTable(shipped.data(input$MFCForecastingrange[1],input$MFCForecastingrange[2]))
-
+  output$probtable <- renderTable((round(as.matrix(table( outgoing_basketsubset$quarter,outgoing_basketsubset$returnclass)/rowSums(table( outgoing_basketsubset$quarter,outgoing_basketsubset$returnclass))),2)))
   output$outgoingforecastplotcomparison <- renderPlot({
     dfForecast <- compareoutgoingforecast.data(MFCrange())
     stlsub <-dfForecast[c(1,11,12)]
@@ -388,6 +462,12 @@ output$probalarm <- renderText(if(as.numeric(input$scenarioslider1)+as.numeric(i
     
       x <- x[c(1,2,3,20,21)]
       setnames(x,1:5,c("date","CO shipped", "Articles shipped", "CO returned", "Articles returned"))
+      
+      if(isolate(input$ScenarioWeek)){
+        x$week <- paste(year(x$date), week(x$date), sep = " ")
+        x <- data.table(x)[, list("start of week" = min(date), "CO shipped" = sum(`CO shipped`, na.rm=TRUE), "Articles shipped" = sum(`Articles shipped`, na.rm=TRUE), "CO returned" = sum(`Articles shipped`, na.rm=TRUE), "Articles returned" = sum(`Articles returned`, na.rm=TRUE)), by = week]
+      }
+      
       x}else{
         data.frame("warning"="No scenario calculated")
       }

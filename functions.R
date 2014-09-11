@@ -299,13 +299,21 @@ getfutureoverview <- function(data){
 }
 
 
-shipped.plot <- function(start, end){
+shipped.plot <- function(start, end, week=FALSE){
 	if(as.numeric(end-start)==1){qplot(y=1)+geom_text(label="                              Range too small for plotting",color = "red")}
 	else{
     if(end<=maxdate){
         subset <- c_shipping_table[c_shipping_table$days >= start & c_shipping_table$days <= end,]
         setnames(subset,3,"Country")
+        if(week){
+        	dfw <- subset
+        	dfw <- data.table(dfw)[, list(date = min(days), shipped =sum(shipped)), by = list(week, Country)]
+        	ggplot(dfw, aes(x=date, y=shipped, col=Country))+geom_line()+facet_grid(Country ~. , scales="free")+xlab("date")+ylab("CO shipped")
+				
+
+        }else{
         ggplot(subset, aes(x=days, y=shipped, col=Country))+geom_line()+facet_grid(Country ~. , scales="free")+xlab("date")+ylab("CO shipped")
+    	}
     }else{
         if(start>maxdate){
             d <- displayfutureoverview(as.numeric(end-maxdate))
@@ -315,8 +323,14 @@ shipped.plot <- function(start, end){
             grid <- expand.grid("date" = seq(start, end, by ="days"), "Country"=levels(c_shipping_table$Country) )
             df <- join(grid,subset)
             df$value <- ifelse(is.na(df$value),0,df$value)
+            if(week){
+				dfw <- df[df$Country!="total" & df$date>=start & df$date<=end,]
+				dfw$week <- paste(year(dfw$date), week(dfw$date), sep = " ")
+				dfw <- data.table(dfw)[, list(date = min(date), value =sum(value)), by = list(week, Country)]
+				ggplot(dfw, aes(x=date, y = value, col =Country))+geom_line()+facet_grid(Country ~ ., scales="free")+xlab("date")+ylab("CO shipped")
+            	}else{
             ggplot(df[df$Country!="total" & df$date>=start & df$date<=end,], aes(x=date, y=value, col = Country))+geom_line()+facet_grid(Country~.,scales="free")+xlab("date")+ylab("CO shipped")
-            
+            }
         }else{
             #mixed between
             subsethistory <- c_shipping_table[c_shipping_table$days >= start,1:3]
@@ -330,8 +344,15 @@ shipped.plot <- function(start, end){
 
                  df <- join(grid,data)
                  df$shipped <- ifelse(is.na(df$shipped),0,df$shipped)
+             if(week){
+             	dfw <- df
+             	dfw$week <- paste(year(dfw$date), week(dfw$date), sep = " ")
+				dfw <- data.table(dfw)[, list(date = min(date), shipped =sum(shipped)), by = list(week, Country)]
+				ggplot(dfw, aes(x=date, y=shipped, col = Country))+geom_line()+facet_grid(Country~.,scales="free")+xlab("date")+ylab("CO shipped")+geom_vline(x=as.numeric(maxdate), linetype="dashed")
+           	
+             }else{
             ggplot(df, aes(x=date, y=shipped, col = Country))+geom_line()+facet_grid(Country~.,scales="free")+xlab("date")+ylab("CO shipped")+geom_vline(x=as.numeric(maxdate), linetype="dashed")
-            
+            }
         }
         
     }

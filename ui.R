@@ -104,6 +104,7 @@ shinyUI(navbarPage("Inventory Management Tool",
                                   #forecast horizon
                                   "The 2nd and 3rd option is computationally expensive. Every day takes more than 30 sec. to calculate.",
                                   dateRangeInput("SForecastrange", label = "Range", start = maxdate, min =maxdate,end= maxdate+1),
+                                  checkboxInput("SForecastWeek",label = "Aggregate weekly",value =FALSE),
                                   radioButtons("sRadioB", label = "Select Level", choices = c("Forecast on Purchase Orders (Incoming only)" = "1", "Forecast on Country level (Outgoing only)" = "2", "Forecast Inventory (Inbound, Outgoing and Returns)" ="3" ), "1"),
                                   actionButton("SForecastexecute", label = "Start"),
                                   br(),
@@ -132,7 +133,7 @@ shinyUI(navbarPage("Inventory Management Tool",
                                             
                                               "Choose the type of forecast you want to make. Other views on the forecasted data are available through the navigation bar",br(),
                                               dateRangeInput("ScenarioForecastrange", label = "Range", start = maxdate, min =maxdate,end= maxdate+1),
-                                              
+                                              checkboxInput("ScenarioWeek", "Aggregate weekly", value=FALSE),
                                               sliderInput("ScenarioOrderAmplifier", label = "CO in relation to forecast", min = 0, max = 200,value = 100,step=1,format = "0 %"),
                                               checkboxInput("IncludeOpenReturns", label ="Include returns from recently shipped CO",value = FALSE),
                                              # textInput("ScenarioPF","Probability for a completely returned Box", value = round(returnratio[returnratio$Var1 ==paste(year(today()-90),quarters(today()-90) ,sep = " ") & returnratio$Var2 == "F", ]$Freq/ sum(returnratio[returnratio$Var1 ==paste(year(today()),quarters(today()) ,sep = " ") & returnratio$Var2 != "N", ]$Freq),2)),
@@ -335,7 +336,9 @@ shinyUI(navbarPage("Inventory Management Tool",
                                        
                                        ),
                               tabPanel("Return probabilities",
-                                       plotOutput("returnprobs")
+                                     
+                                       plotOutput("returnprobs"),
+                                       wellPanel(tableOutput("probtable"))
                                        ),
                               tabPanel("Basket Size Distribution",
                                      
