@@ -86,6 +86,7 @@ outgoing_basketsubset <- outgoing_basketsubset[outgoing_basketsubset$articles_sh
 outgoing_basketsubset$returnclass <- ifelse(outgoing_basketsubset$articles_shipped==outgoing_basketsubset$articles_returned, "F", ifelse(outgoing_basketsubset$articles_returned==0, "N", "P"))
 outgoing_basketsubset$returnclass <- as.factor(outgoing_basketsubset$returnclass)
 outgoing_basketsubset$datediff_shipped_returned <- as.numeric(outgoing_basketsubset$date_returned - outgoing_basketsubset$date_shipped,  units = "days")
+outgoing_basketsubset$datediff_shipped_returned_biz <- bizdays(outgoing_basketsubset$date_shipped, outgoing_basketsubset$date_returned, cal = Calendar(weekdays = c("sunday","saturday")))
 outgoing_basketsubset$isreturned <- ifelse(is.na(outgoing_basketsubset$date_returned), FALSE,TRUE)
 outgoing_basketsubset$age_class_name <- factor(outgoing_basketsubset$age_class)
 levels(outgoing_basketsubset$age_class_name) <- c("younger than 30", "between 30 and 40", "between 40 and 60", "older than 60")

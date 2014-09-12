@@ -98,11 +98,9 @@ shinyUI(navbarPage("Inventory Management Tool",
                                   plotOutput("forecastplot"),
                                     dataTableOutput("forecastdata")
                                   ),
-                                sidebarPanel("Settings",
-                                  #settings
-                                  #type of output
-                                  #forecast horizon
-                                  "The 2nd and 3rd option is computationally expensive. Every day takes more than 30 sec. to calculate.",
+                                sidebarPanel(h4("Settings"),
+                                             
+                
                                   dateRangeInput("SForecastrange", label = "Range", start = maxdate, min =maxdate,end= maxdate+1),
                                   checkboxInput("SForecastWeek",label = "Aggregate weekly",value =FALSE),
                                   radioButtons("sRadioB", label = "Select Level", choices = c("Forecast on Purchase Orders (Incoming only)" = "1", "Forecast on Country level (Outgoing only)" = "2", "Forecast Inventory (Inbound, Outgoing and Returns)" ="3" ), "1"),
@@ -129,9 +127,9 @@ shinyUI(navbarPage("Inventory Management Tool",
                                    
                                    
                                  ),
-                                 sidebarPanel("Settings",
+                                 sidebarPanel(h4("Settings"),
                                             
-                                              "Choose the type of forecast you want to make. Other views on the forecasted data are available through the navigation bar",br(),
+                                              "The scenario mode can change parameters in the forecast. Only outbound and returns are forecasted.",br(),
                                               dateRangeInput("ScenarioForecastrange", label = "Range", start = maxdate, min =maxdate,end= maxdate+1),
                                               checkboxInput("ScenarioWeek", "Aggregate weekly", value=FALSE),
                                               sliderInput("ScenarioOrderAmplifier", label = "CO in relation to forecast", min = 0, max = 200,value = 100,step=1,format = "0 %"),
@@ -144,8 +142,9 @@ shinyUI(navbarPage("Inventory Management Tool",
                                               uiOutput("scenarioslider3"),
                                               strong(textOutput("probalarm")),
                                               
-                                              actionButton("ScenarioExecute","Start"),
-                                              dataTableOutput("ScenarioSidebar")
+                                              actionButton("ScenarioExecute","Start")
+                                            #,
+                                              #dataTableOutput("ScenarioSidebar")
                                               
                                  ))
                       
@@ -259,7 +258,10 @@ shinyUI(navbarPage("Inventory Management Tool",
                                        tabsetPanel(
                                          tabPanel("Country View",
                                                   "Countries influence the return time, because the shipping time to the customer, as well as the return time to our warehouse increases with distance.",
-                                       plotOutput("returndistributionsplitbycountry")),
+                                                  tabsetPanel(
+                                                    tabPanel("Day",plotOutput("returndistributionsplitbycountry")),
+                                                    tabPanel("Businessday", plotOutput("returndistributionsplitbycountrybizday")))
+                                       ),
                                           tabPanel("Weekday View",
                                                    "The weekday of a shipment has an effect on the return time, because we do not recieve returns on weekends. The gaps in the histogramms show this. This effect is used in the return time estimation. ",
                                             plotOutput("returndistributionsplitbyweekday")))

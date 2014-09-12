@@ -64,7 +64,7 @@ shinyServer(function(input, output, session) {
              df <- df[c(1,2,3,20,21,40,41)]
              setnames(df,1:7,c("date","CO shipped", "Articles shipped", "PO recieved", "Articles recieved", "CO returned", "Articles returned"))
              df$week <-  paste(year(df$date),week(df$date),sep= " ")
-             df <- data.table(df)[,list(mindate = min(date), "CO shipped" = sum(`CO shipped`, na.rm=TRUE), "Articles shipped" = sum(`Articles shipped`, na.rm=TRUE),"PO partitions recieved" =  sum(`PO recieved`, na.rm=TRUE), "CO returned" = sum(`CO returned`, na.rm=TRUE), "Articles returned" = sum(`Articles returned`, na.rm=TRUE) ), by = week]
+             df <- data.table(df)[,list(mindate = min(date), "CO shipped" = sum(`CO shipped`, na.rm=TRUE), "Articles shipped" = sum(`Articles shipped`, na.rm=TRUE),"PO partitions recieved" =  sum(`PO recieved`, na.rm=TRUE),"Articles recieved"=sum(`Articles recieved`), "CO returned" = sum(`CO returned`, na.rm=TRUE), "Articles returned" = sum(`Articles returned`, na.rm=TRUE) ), by = week]
              setnames(df, 2, "start of week")
              df
             }
@@ -134,6 +134,10 @@ shinyServer(function(input, output, session) {
     b <- rbind(orders,articles)
     print(ggplot(b, aes(x = date, y = value, group = type,color=type ))+geom_line()+facet_grid(type~.,scales="free")+ylab(""))
   })
+  output$returndistributionsplitbycountrybizday <- renderPlot(
+    print(ggplot(outgoing_basketsubset[outgoing_basketsubset$isreturned==TRUE,], aes(x=datediff_shipped_returned_biz, fill = shipping_country))+geom_density(alpha=0.3) + scale_x_continuous(breaks=seq(0,40,5)) +coord_cartesian(xlim = c(0,50), ylim = c(0,0.15)) + facet_grid( shipping_country~ quarter) + scale_y_continuous(breaks=seq(0,0.15,0.03))+xlab("Difference in days between shipment and return")
+    )
+  )
   
   output$DeliveryWindowGraph <- renderPlot({print(ggplot(supplier_po_measures[!is.na(supplier_po_measures$edd),], aes(x = w_percentage_of_window, y = purchase_order_id, color = order_type, size = articles))+geom_point()+coord_cartesian(xlim=c(-5,5))+scale_x_continuous(breaks=seq(-5,5,0.25))+geom_vline(x=0, linetype="dashed",color = "red")+geom_vline(x=1, linetype="dashed",color = "red")+theme(axis.ticks = element_blank(), axis.text.y = element_blank(), axis.text.x=element_text(angle=90,hjust=0))+xlab("Percentage of delivery window")+ylab("PO id"))})
   output$DeliveryWindowData <- renderDataTable({
@@ -274,11 +278,21 @@ shinyServer(function(input, output, session) {
   output$InventoryDataTable <-renderDataTable({
     inventory_c[inventory_c$date>=input$inventoryrange[1]&inventory_c$date<=input$inventoryrange[2],]
   })
-  HelperForecast<- reactive({switch(input$sRadioB,
-                                       "1"=c(" Daily"," fast"," Linear Regression","Displays a forecast of the incoming Purchase Orders in the specified range. See Incoming tab for other views on the data."),
-                                       "2"=c(" Daily, Countrywise" , " fast", "STL, HoltWinters Exponential Smoothing","Displays a forecast of the outgoing Customer Orders in the specified range split by country. See Outgoing tab for other views on the data as well as historic performance."),
-                                       "3"=c(" Daily"," slow (~30sec/forecast day)","All","Simulates inventory changes in the specified range. Based on the outgoing forecast, every order sampled out of empirical data. The returns for every order are forecasted and also their return time. Because of this the forecast table displays the last rows without shipping, but with returns. The forecasted incoming POs are included as well. See Return or Inventroy tab for other views on the data.")
-  )})
+  HelperForecast<- reactive({
+    step1 <- switch(input$sRadioB,
+                                       "1"=c(" daily"," fast"," Linear Regression","Displays a forecast of the incoming Purchase Orders in the specified range. See Incoming tab for other views on the data."),
+                                       "2"=c(" daily, countrywise" , " fast", "STL, HoltWinters Exponential Smoothing","Displays a forecast of the outgoing Customer Orders in the specified range split by country. See Outgoing tab for other views on the data as well as historic performance."),
+                                       "3"=c(" daily"," slow (~30sec/forecast day)","All","Simulates inventory changes in the specified range. Based on the outgoing forecast, every order sampled out of empirical data. The returns for every order are forecasted and also their return time. Because of this the forecast table displays the last rows without shipping, but with returns. The forecasted incoming POs are included as well. See Return or Inventroy tab for other views on the data.")
+                )
+    if(input$SForecastWeek){
+      if(step1[1]==" daily"){
+        step1[1] = "weekly"
+      }else{
+        step1[1] = "weekly, countrywise"}
+    }
+    step1
+  
+  })
   output$HelperForecastLevel <- renderText({ a <- HelperForecast()
                                              a[1]})
   

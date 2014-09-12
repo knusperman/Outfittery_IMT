@@ -34,6 +34,7 @@ openPO.forecast <- data.frame(
 	"supplier_id" = openPO$supplier_id,
 	"articles" = openPO$q_sum-openPO$fq_sum,
 	"edd" = openPO$earliest_delivery_date,
+	"window"= as.numeric(openPO$latest_delivery_date - openPO$earliest_delivery_date, units ="days"),
 	"windowweekday" = factor(weekdays(openPO$earliest_delivery_date))
 	)
 openPO.forecast <- join(openPO.forecast, clusterdata)
@@ -44,11 +45,11 @@ openPO.forecast$cluster <- ifelse(is.na(openPO.forecast$cluster), names(t)[t == 
 #create models
 
 #new models
-rlm <- lmrob(formula = w_mean_day_in_window ~ cluster + windowweekday + articles, data = wW_supplier_po_measures)
-if(rlm$converged==FALSE){rlm <- lm(formula = w_mean_day_in_window ~ cluster + windowweekday + articles, data = wW_supplier_po_measures)}
+rlm <- lmrob(formula = w_mean_day_in_window ~ cluster + windowweekday + window+articles, data = wW_supplier_po_measures)
+if(rlm$converged==FALSE){rlm <- lm(formula = w_mean_day_in_window ~ cluster + windowweekday + window+articles, data = wW_supplier_po_measures)}
 #lm4 <- lm(formula = w_mean_day_in_window ~cluster + windowweekday + sqrt(articles), data = wW_supplier_po_measures[wW_supplier_po_measures$avg_w_mean_day_in_window<40&wW_supplier_po_measures$avg_w_mean_day_in_window>-30,])
        
-openPO.forecast$lmpredict <- predict(rlm,data.frame("cluster"=openPO.forecast$cluster, "windowweekday"=openPO.forecast$windowweekday, "articles"=openPO.forecast$articles))
+openPO.forecast$lmpredict <- predict(rlm,data.frame("cluster"=openPO.forecast$cluster, "windowweekday"=openPO.forecast$windowweekday,"window"=openPO.forecast$window, "articles"=openPO.forecast$articles))
 
 openPO$f_arrival <- openPO$earliest_delivery_date+round(openPO.forecast$lmpredict,0)
 openPO$pastwindow <- ifelse(openPO$f_arrival<maxdate,as.numeric(maxdate-openPO$latest_delivery_date),NA)
